@@ -1,0 +1,10 @@
+langchain
+langgraph
+langchain-openai
+python-dotenv
+langchain-chroma 
+chromadb 
+fastapi
+pydantic
+streamlit
+langchain-google-genai

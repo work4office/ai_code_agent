@@ -1,0 +1,14 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+chroma_db/
+*.egg-info
+
+# Virtual environments
+.venv# Ignore local environment variables
+.env
+.env*.local
+c
