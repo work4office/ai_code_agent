@@ -56,3 +56,25 @@ async def read_file(file_path: str) -> str:
 async def write_file(file_path: str, content: str) -> None:
     async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
         await f.write(content)
+
+
+async def create_backup(file_path: str, directory_path: str) -> None:
+    if os.path.exists(file_path):
+
+        relative_path = os.path.relpath(
+            file_path,
+            directory_path,
+        )
+
+        backup_path = os.path.join(
+            ".agent_backups",
+            relative_path + ".agent.backup",
+        )
+
+        os.makedirs(
+            os.path.dirname(backup_path),
+            exist_ok=True,
+        )
+
+        original = await read_file(file_path)
+        await write_file(backup_path, original)

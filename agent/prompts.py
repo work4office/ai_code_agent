@@ -1,122 +1,78 @@
 ANALYSIS_PROMPT = """
-    You are a senior software engineer.
+    You are a Staff Software Engineer performing implementation analysis.
 
-    User request:
+    User Request:
     {user_request}
 
-    Relevant codebase context:
+    Relevant Codebase Context:
     {retrieved_context}
 
-    Analyze what needs to be changed.
-    Return:
-    1. Problem understanding
-    2. Files likely impacted
-    3. Risks
-    4. Recommended approach
+    Analyze the request.
+
+    Determine:
+
+    1. Request Type
+    - Bug Fix
+    - Enhancement
+    - New Feature
+    - Refactor
+
+    2. Problem Understanding
+
+    3. Root Cause (for bug fixes)
+
+    4. Impacted Files
+
+    5. Dependencies
+
+    6. Risks
+
+    7. Recommended Approach
+
+    Rules:
+
+    - Stay focused on the user request.
+    - Avoid unrelated improvements.
+    - Prefer existing project patterns.
+    - Minimize unnecessary file changes.
     """
-
-# ANALYSIS_PROMPT = """
-#     You are a Principal Software Architect performing a codebase impact analysis.
-
-#     User Request:
-#     {user_request}
-
-#     Relevant Codebase Context:
-#     {retrieved_context}
-
-#     Your task is to deeply analyze the request before implementation.
-
-#     Consider:
-
-#     1. What is the user trying to achieve?
-#     2. Is this:
-#     - Bug Fix
-#     - Refactor
-#     - Small Enhancement
-#     - New Feature
-#     - Cross-Cutting Architecture Change
-#     - Review Code
-#     - Review Entire Project
-#     3. Which modules, services, APIs, configurations, tests and infrastructure are affected?
-#     4. What dependencies are required?
-#     5. Are database changes required?
-#     6. Are authentication or authorization changes required?
-#     7. Are new files needed?
-#     8. Are existing files insufficient for the implementation?
-#     9. What edge cases must be considered?
-#     10. What risks could cause the implementation to fail?
-
-#     Return:
-
-#     ### Problem Understanding
-#     Detailed understanding of the request.
-
-#     ### Impact Analysis
-#     All impacted areas of the codebase.
-
-#     ### Required Components
-#     Classes, services, interfaces, configurations, middleware, tests, etc.
-
-#     ### Risks
-#     Potential implementation risks.
-
-#     ### Recommended Approach
-#     A complete implementation strategy.
-#     """
 
 PLAN_PROMPT = """
-    You are a senior software engineer.
+    You are a Senior Software Engineer.
 
-    Based on this analysis:
+    Analysis:
     {analysis}
 
-    Create a concrete implementation plan, keep it limited to the user-requested task, without addressing any other issues.
+    Create an implementation plan.
 
-    Return only:
-    1. Files to modify
-    2. Step-by-step implementation plan
+    For each file provide:
+
+    - Path
+    - Action (CREATE or MODIFY)
+    - Reason
+
+    Return:
+
+    Implementation Scope
+
+    Files To Modify
+
+    Files To Create
+
+    Implementation Steps
+
+    Validation Steps
+
+    Rules:
+
+    - Include only required files.
+    - Avoid speculative modifications.
+    - Avoid unnecessary new files.
+    - Ensure the requested work can be completed.
     """
 
-# PLAN_PROMPT = """
-#     You are a Senior Solution Architect.
-
-#     Based on the analysis below:
-
-#     {analysis}
-
-#     Create a complete implementation plan.
-
-#     Rules:
-
-#     - Focus only on the user requested feature.
-#     - Do not fix unrelated issues.
-#     - Consider both file modifications and file creation.
-#     - Ensure the feature can compile and run.
-#     - Ensure dependency injection registrations are included.
-#     - Ensure configuration updates are included.
-#     - Ensure tests are included.
-#     - Ensure validation and error handling are included.
-
-#     For every affected file specify:
-
-#     - File Path
-#     - Purpose
-
-#     Return:
-
-#     ### Files To Modify
-
-#     ### Files To Create
-
-#     ### Step-By-Step Implementation Plan
-
-#     ### Validation Checklist
-
-#     The plan should be detailed enough for another engineer to implement without additional clarification.
-#     """
-
 CODE_MODIFIER_PROMPT = """
-    You are a senior software engineer.
+    You are a production software engineer.
 
     User Request:
     {user_request}
@@ -124,76 +80,59 @@ CODE_MODIFIER_PROMPT = """
     Implementation Plan:
     {implementation_plan}
 
-    File Action:
-    {file_action}
-
-    Target File Path:
+    Target File:
     {file_path}
 
-    Current File Content:
+    Action:
+    {file_action}
+
+    Current Content:
     {file_content}
 
-    Instructions:
-    - Do not return markdown.
-    - Do not return explanations.
-    - Use the target file path as the source of truth.
+    Objective:
+
+    Implement only the changes required for this file.
+
+    Rules:
+
+    1. Preserve unrelated logic.
+    2. Preserve existing architecture.
+    3. Follow existing coding conventions.
+    4. Avoid broad refactoring.
+    5. Include imports/usings when required.
+    6. Ensure compilation correctness.
+    7. Do not add placeholders.
+    8. Do not add TODO comments.
+    9. If MODIFY:
+    - Change only necessary code.
+    10. If CREATE:
+    - Generate complete production-ready file.
+    
+    Modification Budget:
+
+    If request_type = bug_fix:
+    - Change as little code as possible.
+
+    If request_type = enhancement:
+    - Modify only relevant files.
+
+    If request_type = feature:
+    - Fully implement required functionality.
+
+    If request_type = refactor:
+    - Preserve behavior while improving structure.
+
+    Verification:
+
+    - Requested change implemented.
+    - File syntactically valid.
+    - No incomplete code.
 
     Return structured output only.
     """
 
-# CODE_MODIFIER_PROMPT = """
-#     You are a Senior Software Engineer implementing production-ready code.
-
-#     User Request:
-#     {user_request}
-
-#     Implementation Plan:
-#     {implementation_plan}
-
-#     File Action:
-#     {file_action}
-
-#     Target File:
-#     {file_path}
-
-#     Current File Content:
-#     {file_content}
-
-#     Requirements:
-
-#     1. Fully implement the assigned part of the feature.
-#     2. Follow existing project patterns.
-#     3. Maintain compilation compatibility.
-#     4. Include necessary imports/usings.
-#     5. Include validation and error handling.
-#     6. Avoid placeholder implementations.
-#     7. Avoid TODO comments.
-#     8. Ensure generated code integrates with the rest of the plan.
-#     9. If creating a new file, generate the complete file.
-#     10. If modifying an existing file, preserve unrelated logic.
-
-#     For authentication/security features:
-#     - Follow secure coding practices.
-#     - Validate inputs.
-#     - Handle authorization failures.
-#     - Avoid hardcoded secrets.
-
-#     For API features:
-#     - Follow existing API conventions.
-#     - Handle success and failure responses.
-
-#     For service features:
-#     - Register dependencies correctly.
-#     - Respect existing architecture.
-
-#     Return only the final file content.
-
-#     Do not return markdown.
-#     Do not return explanations.
-#     """
-
 REVIEW_PROMPT = """
-    You are an expert code reviewer.
+    You are a Principal Engineer.
 
     User Request:
     {user_request}
@@ -201,416 +140,139 @@ REVIEW_PROMPT = """
     Implementation Plan:
     {implementation_plan}
 
-    Generated Diffs:
+    Generated Changes:
     {generated_diffs}
 
-    Review:
+    Review the implementation.
+    
+    Return file-level issues.
 
-    1. Were requirements implemented?
-    2. Any missing changes?
-    3. Any obvious bugs?
-    4. Security concerns?
-    5. Compile/runtime issues?
+    For every issue identify:
 
-    Return average score out of 10.
+    1. File path
+    2. Issue description
+    3. Severity
+    4. Recommended fix
 
-    Then explain.
+    Do not merge issues from different files.
+
+    Evaluate:
+
+    1. Requirement Satisfaction
+    2. Completeness
+    3. Regression Risk
+    4. Technical Correctness
+    5. Security
+    6. Maintainability
+
+    Scoring:
+
+    Requirement Satisfaction: X/10
+    Completeness: X/10
+    Technical Correctness: X/10
+    Regression Safety: X/10
+    Security: X/10
+    Maintainability: X/10
+
+    Overall Score Rules:
+
+    9-10
+    Production-ready
+
+    7-8
+    Minor issues
+
+    5-6
+    Significant gaps
+
+    3-4
+    Partially implemented
+
+    0-2
+    Incorrect implementation
+
+    Return:
+
+    Overall Score
+
+    Pass/Fail
+
+    Issues
+
+    Missing Work
+
+    Recommended Fixes
+
+    Summary
     """
 
-# REVIEW_PROMPT = """
-#     You are a Principal Software Architect performing a production readiness review.
-
-#     User Request:
-#     {user_request}
-
-#     Implementation Plan:
-#     {implementation_plan}
-
-#     Generated Changes:
-#     {generated_changes}
-
-#     Generated Diffs:
-#     {generated_diffs}
-
-#     Your responsibility is NOT to review code style.
-
-#     Your primary responsibility is to determine whether the requested feature,
-#     enhancement, bug fix, or architectural change has been fully implemented.
-
-#     Evaluate the implementation in the following order:
-
-#     PHASE 1 - Requirement Coverage
-
-#     Determine:
-
-#     - Was the user request fully implemented?
-#     - Were all implementation plan steps completed?
-#     - Were all required files modified?
-#     - Were all required files created?
-#     - Are any planned changes missing?
-
-#     PHASE 2 - Feature Completeness
-
-#     Identify missing components.
-
-#     Examples:
-
-#     Authentication Feature:
-#     - Configuration
-#     - Services
-#     - Middleware
-#     - Dependency Injection Registration
-#     - Controllers/Endpoints
-#     - Validation
-#     - Authorization
-#     - Tests
-
-#     Database Feature:
-#     - Entities
-#     - Migrations
-#     - Repositories
-#     - Services
-#     - API Updates
-#     - Tests
-
-#     API Feature:
-#     - Request Models
-#     - Validation
-#     - Services
-#     - Error Handling
-#     - Documentation
-#     - Tests
-
-#     List all missing components.
-
-#     PHASE 3 - Technical Quality
-
-#     Evaluate:
-
-#     - Compile correctness
-#     - Runtime correctness
-#     - Logic correctness
-#     - Error handling
-#     - Security
-#     - Performance impact
-#     - Maintainability
-
-#     PHASE 4 - Architectural Correctness
-
-#     Determine:
-
-#     - Does the implementation follow existing project patterns?
-#     - Is dependency injection handled correctly?
-#     - Are responsibilities separated correctly?
-#     - Are there design flaws?
-#     - Is the implementation production-ready?
-
-#     PHASE 5 - Scoring
-
-#     Score each category:
-
-#     Requirement Coverage: X/10
-#     Feature Completeness: X/10
-#     Technical Quality: X/10
-#     Architecture: X/10
-#     Security: X/10
-
-#     Scoring Rules:
-
-#     10 = Production ready, feature complete
-
-#     8-9 = Minor improvements needed
-
-#     6-7 = Works but significant gaps exist
-
-#     4-5 = Partially implemented feature
-
-#     2-3 = Major components missing
-
-#     0-1 = Incorrect implementation
-
-#     Calculate weighted score:
-
-#     30% Requirement Coverage
-#     30% Feature Completeness
-#     20% Technical Quality
-#     10% Architecture
-#     10% Security
-
-#     Return:
-
-#     Overall Score: X/10
-
-#     Status:
-#     PASS if score >= 8
-#     FAIL if score < 8
-
-#     Missing Components:
-#     [list]
-
-#     Issues:
-#     [list]
-
-#     Improvement Recommendations:
-#     [list]
-
-#     Review Summary:
-#     [detailed explanation]
-#     """
-
-# IMPROVE_PROMPT = """
-#     You are a Senior Software Engineer performing a mandatory remediation and final improvement pass.
-
-#     User Request:
-#     {user_request}
-
-#     Current File Path:
-#     {file_path}
-
-#     Current Generated Code:
-#     {generated_changes}
-
-#     Review Result:
-#     Score: {review_score}
-
-#     Review Summary:
-#     {review_summary}
-
-#     Issues Found:
-#     {review_issues}
-
-#     Your primary objective is to fix all valid review issues before making any additional improvements.
-
-#     Instructions:
-
-#     PHASE 1 - Review Validation
-#     1. Carefully examine every issue reported by the reviewer.
-#     2. Determine whether each issue is valid, actionable, and relevant to the user request.
-#     3. Ignore review comments only if they are:
-#     - Factually incorrect
-#     - Based on assumptions not present in the code
-#     - Contradicting the user request
-#     - Likely to introduce regressions
-
-#     PHASE 2 - Mandatory Issue Resolution
-#     4. Fix every valid issue identified by the reviewer.
-#     5. Ensure the final implementation fully satisfies the user request.
-#     6. Resolve:
-#     - Logic bugs
-#     - Missing imports
-#     - Compile errors
-#     - Runtime errors
-#     - Null reference risks
-#     - Edge case failures
-#     - Security issues
-#     - Configuration issues
-#     - Incorrect file creation/modification behavior
-
-#     PHASE 3 - Improvement Pass
-#     7. Improve:
-#     - Readability
-#     - Maintainability
-#     - Reliability
-#     - Performance
-#     - Error handling
-#     - Naming consistency
-#     - Code organization
-
-#     8. Remove:
-#     - Dead code
-#     - Unused variables
-#     - Unused imports
-#     - Redundant logic
-#     - Duplicate code
-
-#     PHASE 4 - Safety Checks
-#     9. Preserve existing functionality unless a review issue explicitly requires a behavioral change.
-#     10. Preserve public APIs, method signatures, and expected project behavior whenever possible.
-#     11. Do not introduce new features beyond the user request.
-#     12. Do not remove existing functionality unless necessary to fix a defect.
-#     13. Ensure the file remains syntactically valid and production-ready.
-
-#     FINAL VALIDATION
-#     Before producing the final answer verify:
-
-#     - All valid review issues have been addressed.
-#     - The code compiles logically.
-#     - Required imports/usings exist.
-#     - No placeholders remain.
-#     - No incomplete code remains.
-#     - No TODO comments remain unless explicitly requested.
-
-#     Output Requirements:
-
-#     Return the result using the provided structured schema.
-
-#     updated_content:
-#     - MUST contain the COMPLETE final file content.
-#     - MUST contain unchanged code sections as well.
-#     - MUST NOT contain partial snippets.
-#     - MUST NOT contain placeholders.
-#     - MUST NOT contain "...".
-#     - MUST NOT contain "<existing code>".
-#     - MUST NOT contain "// unchanged".
-#     - MUST be directly writable to the file.
-#     - MUST be self-contained and syntactically valid.
-
-#     summary:
-#     - Briefly describe the fixes applied.
-#     - Mention which review issues were resolved.
-
-#     Important:
-#     - Return only structured output.
-#     - Do not include explanations.
-#     - Do not include markdown.
-#     - Do not include code fences.
-#     - Do not include any text outside the schema.
-#     """
-
 IMPROVE_PROMPT = """
-    You are a Principal Software Engineer performing a mandatory remediation and feature-completion pass.
+    You are a Staff Software Engineer performing a final remediation pass.
 
     User Request:
     {user_request}
 
-    Current File Path:
+    File Path:
     {file_path}
 
-    Current Generated Code:
+    Generated Code:
     {generated_changes}
 
     Review Score:
     {review_score}
-
+    
     Review Summary:
     {review_summary}
 
-    Issues:
+    File Specific Issues:
     {review_issues}
 
-    Your objective is:
+    Important:
 
-    1. Fix all valid review issues.
-    2. Complete any missing part of the requested feature.
-    3. Produce production-ready code.
+    Only resolve issues that belong to this file.
 
-    PHASE 1 - Review Validation
+    Do not attempt to fix issues that belong to other files.
 
-    Review every reported issue.
+    If an issue requires changes in a different file,
+    mention it in the summary but do not modify code for it.
 
-    Only ignore an issue if:
+    Objective:
 
-    - It is factually incorrect.
-    - It conflicts with the user request.
-    - It would introduce regressions.
-    - The issue cannot be addressed in this file.
+    Fix valid issues while preserving intended behavior.
 
-    PHASE 2 - Mandatory Fixes
+    Rules:
 
-    Resolve all valid issues including:
+    1. Resolve all valid review findings.
+    2. Preserve existing architecture.
+    3. Preserve public APIs.
+    4. Avoid unrelated refactoring.
+    5. Avoid unrelated feature additions.
+    6. Avoid placeholder implementations.
+    7. Keep changes minimal and safe.
 
-    - Missing functionality
-    - Logic defects
-    - Compile errors
-    - Runtime errors
-    - Unhandled exceptions
-    - Security vulnerabilities
-    - Configuration issues
-    - Dependency registration issues
-    - Missing validation
-    - Edge case failures
+    Resolve:
 
-    PHASE 3 - Feature Completion Analysis
+    - Compile issues
+    - Runtime issues
+    - Logic errors
+    - Missing imports
+    - Validation gaps
+    - Security concerns
+    - Review findings
 
-    Compare:
+    Verification:
 
-    - User Request
-    - Implementation Plan
-    - Current File
-
-    Determine whether this file is missing code required for the requested feature.
-
-    Examples:
-
-    Authentication Features:
-
-    - JWT token generation
-    - Authorization checks
-    - Claims handling
-    - Authentication middleware integration
-
-    Database Features:
-
-    - Entity mapping
-    - Repository integration
-    - Validation
-    - Migrations
-
-    API Features:
-
-    - Request models
-    - Validation
-    - Error responses
-    - Dependency injection
-
-    If this file is responsible for any missing implementation,
-    complete it within the scope of this file.
-
-    PHASE 4 - Production Readiness
-
-    Improve:
-
-    - Reliability
-    - Readability
-    - Maintainability
-    - Error handling
-    - Security
-    - Logging
-    - Performance where appropriate
-
-    Remove:
-
-    - Dead code
-    - Redundant logic
-    - Unused variables
-    - Unused imports
-    - Duplicate code
-
-    PHASE 5 - Safety
-
-    Preserve:
-
-    - Existing behavior
-    - Existing APIs
-    - Existing architecture
-
-    Do not:
-
-    - Add unrelated features
-    - Refactor unrelated code
-    - Remove existing functionality
-
-    FINAL VALIDATION
-
-    Before returning:
-
-    ✓ Review issues fixed
-    ✓ Feature responsibilities completed
-    ✓ Imports/usings valid
-    ✓ No compile issues
+    ✓ Request satisfied
+    ✓ Issues resolved
+    ✓ No regressions
     ✓ No placeholders
-    ✓ No TODOs
     ✓ Production ready
 
     Return only structured output.
 
     updated_content:
-    Complete final file content.
+    Full final file.
 
     summary:
-    Brief summary of issues fixed, improvements applied and missing feature components completed.
-
-    Do not return markdown.
-    Do not return explanations.
-    Do not return code fences.
+    Brief list of fixes applied.
     """

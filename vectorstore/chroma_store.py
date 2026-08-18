@@ -6,7 +6,7 @@ from models.llm import get_embedding, get_goggle_embedding
 
 
 def get_vectorstore(collection_name: str = "codebase"):
-    embeddings = get_goggle_embedding()
+    embeddings = get_embedding()
 
     directory_path = st.session_state.directory_path
 

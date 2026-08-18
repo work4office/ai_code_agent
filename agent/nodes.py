@@ -1,5 +1,5 @@
+import json
 import os
-import asyncio
 import time
 from typing import cast
 
@@ -8,6 +8,7 @@ from agent.schemas import (
     ImplementationPlan,
     FileModification,
     ReviewResult,
+    ReviewIssue,
 )
 from agent.state import AgentState
 from tools.utils import (
@@ -15,7 +16,7 @@ from tools.utils import (
     generate_diff,
     coerce_generated_change,
 )
-from tools.file_tools import scan_directory, read_file, write_file
+from tools.file_tools import create_backup, scan_directory, read_file, write_file
 from tools.code_indexer import index_codebase
 from tools.path_resolver import resolve_agent_file_path
 from tools.retriever import retrieve_relevant_code
@@ -29,7 +30,7 @@ from agent.prompts import (
     IMPROVE_PROMPT,
 )
 
-llm = get_goggle_llm()
+llm = get_llm()
 
 
 def scan_node(state: AgentState) -> AgentState:
@@ -40,9 +41,9 @@ def scan_node(state: AgentState) -> AgentState:
     return {**state, "project_files": files}
 
 
-def index_node(state: AgentState) -> AgentState:
+async def index_node(state: AgentState) -> AgentState:
     start_time = time.perf_counter()
-    index_codebase(state["project_files"])
+    await index_codebase(state["project_files"])
     end_time = time.perf_counter()
     print("index_node: ", end_time - start_time)
     return state
@@ -100,7 +101,7 @@ async def generate_changes_node(state: AgentState) -> AgentState:
         action = "modify" if os.path.exists(resolved_file_path) else "create"
 
         if action == "modify":
-            current_content = read_file(resolved_file_path)
+            current_content = await read_file(resolved_file_path)
         else:
             current_content = ""
 
@@ -129,14 +130,14 @@ async def generate_changes_node(state: AgentState) -> AgentState:
     return {**state, "generated_changes": generated_changes, "retry_count": 1}
 
 
-def generate_diff_node(state: AgentState) -> AgentState:
+async def generate_diff_node(state: AgentState) -> AgentState:
     start_time = time.perf_counter()
     generated_diffs = {}
 
     for file_path, change in state["generated_changes"].items():
 
         if change.action == "modify":
-            original_content = asyncio.run(read_file(file_path))
+            original_content = await read_file(file_path)
         else:
             original_content = ""
 
@@ -159,7 +160,14 @@ async def review_node(state: AgentState) -> AgentState:
     prompt = REVIEW_PROMPT.format(
         user_request=state["user_request"],
         implementation_plan=state["implementation_plan"],
-        generated_changes=state["generated_changes"],
+        # The reviewer tends to reason better when seeing explicit JSON rather than Python object representations.
+        generated_changes=json.dumps(
+            {
+                path: coerce_generated_change(change).model_dump()
+                for path, change in state["generated_changes"].items()
+            },
+            indent=2,
+        ),
         generated_diffs=combined_diff,
     )
     try:
@@ -169,7 +177,12 @@ async def review_node(state: AgentState) -> AgentState:
         review_result = ReviewResult(
             review_score=0,
             summary="The review could not be completed with valid structured output.",
-            issues=[f"Malformed review output: {exc}"],
+            issues=[
+                ReviewIssue(
+                    file_path=None,
+                    issue=f"Malformed review output: {exc}",
+                )
+            ],
         )
     end_time = time.perf_counter()
     print("review_node: ", end_time - start_time)
@@ -181,13 +194,25 @@ async def improve_node(state: AgentState) -> AgentState:
     generated_changes: dict[str, GeneratedChanges] = {}
 
     for file_path, change in state["generated_changes"].items():
+        file_issues = []
+
+        for review_file in state["review_result"].issues:
+            if review_file.file_path is None or review_file.file_path == file_path:
+                file_issues.append(review_file)
+
+        if not file_issues:
+            generated_changes[file_path] = change
+            continue
+
         prompt = IMPROVE_PROMPT.format(
             user_request=state["user_request"],
             file_path=file_path,
-            generated_changes=change,
+            generated_changes=change.updated_content,
             review_score=state["review_result"].review_score,
             review_summary=state["review_result"].summary,
-            review_issues=state["review_result"].issues,
+            review_issues="\n".join(
+                f"[{issue.severity}] {issue.issue}" for issue in file_issues
+            ),
         )
         response = cast(
             FileModification,
@@ -222,7 +247,7 @@ def human_approval_node(state: AgentState):
     return {**state, "approved": bool(approved)}
 
 
-def apply_changes_node(state: AgentState) -> AgentState:
+async def apply_changes_node(state: AgentState) -> AgentState:
     start_time = time.perf_counter()
     applied_files = []
 
@@ -230,13 +255,9 @@ def apply_changes_node(state: AgentState) -> AgentState:
         change = coerce_generated_change(value)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-        if os.path.exists(file_path):
-            backup_path = file_path + ".agent.backup"
+        await create_backup(file_path, state["directory_path"])
 
-            original = asyncio.run(read_file(file_path))
-            asyncio.run(write_file(backup_path, original))
-
-        asyncio.run(write_file(file_path, change.updated_content))
+        await write_file(file_path, change.updated_content)
 
         applied_files.append(file_path)
     end_time = time.perf_counter()

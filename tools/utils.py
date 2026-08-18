@@ -3,6 +3,7 @@ from typing import Any
 
 from agent.schemas import GeneratedChanges, ReviewResult
 
+
 def generate_diff(file_path: str, old_content: str, new_content: str):
 
     diff = difflib.unified_diff(

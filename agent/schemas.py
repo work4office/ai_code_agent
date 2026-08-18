@@ -18,10 +18,21 @@ class FileSelection(BaseModel):
     files: list[str] = Field(default_factory=list)
 
 
+class ReviewIssue(BaseModel):
+    file_path: str | None = None
+    issue: str
+    severity: Literal[
+        "low",
+        "medium",
+        "high",
+        "critical",
+    ] = "medium"
+
+
 class ReviewResult(BaseModel):
     review_score: float = Field(default=0)
     summary: str = Field(default="")
-    issues: list[str] = Field(default_factory=list)
+    issues: list[ReviewIssue] = Field(default_factory=list)
 
 
 class PlannedFileChange(BaseModel):

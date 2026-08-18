@@ -3,13 +3,13 @@ from vectorstore.chroma_store import get_vectorstore
 from tools.file_tools import read_file
 
 
-def index_codebase(file_paths: list[str]) -> str:
+async def index_codebase(file_paths: list[str]) -> str:
     vectorstore = get_vectorstore()
 
     documents = []
 
     for file_path in file_paths:
-        content = read_file(file_path)
+        content = await read_file(file_path)
 
         if not content.strip():
             continue
