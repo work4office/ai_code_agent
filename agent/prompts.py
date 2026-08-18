@@ -140,8 +140,8 @@ REVIEW_PROMPT = """
     Implementation Plan:
     {implementation_plan}
 
-    Generated Changes:
-    {generated_diffs}
+    Review Context:
+    {review_context}
 
     Review the implementation.
     

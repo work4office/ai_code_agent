@@ -15,6 +15,7 @@ from tools.utils import (
     coerce_review_result,
     generate_diff,
     coerce_generated_change,
+    generate_review_context,
 )
 from tools.file_tools import create_backup, scan_directory, read_file, write_file
 from tools.code_indexer import index_codebase
@@ -155,20 +156,13 @@ async def generate_diff_node(state: AgentState) -> AgentState:
 
 async def review_node(state: AgentState) -> AgentState:
     start_time = time.perf_counter()
-    combined_diff = "\n\n".join(state["generated_diffs"].values())
+
+    review_context = generate_review_context(state["generated_changes"])
 
     prompt = REVIEW_PROMPT.format(
         user_request=state["user_request"],
-        implementation_plan=state["implementation_plan"],
-        # The reviewer tends to reason better when seeing explicit JSON rather than Python object representations.
-        generated_changes=json.dumps(
-            {
-                path: coerce_generated_change(change).model_dump()
-                for path, change in state["generated_changes"].items()
-            },
-            indent=2,
-        ),
-        generated_diffs=combined_diff,
+        implementation_plan=state["implementation_plan"].model_dump_json(indent=2),
+        review_context=review_context,
     )
     try:
         response = await llm.with_structured_output(ReviewResult).ainvoke(prompt)
