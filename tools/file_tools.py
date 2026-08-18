@@ -1,4 +1,5 @@
 import os
+import aiofiles
 from typing import List
 
 IGNORE_DIRS = {
@@ -47,11 +48,11 @@ def scan_directory(directory_path: str) -> List:
     return files
 
 
-def read_file(file_path: str) -> str:
-    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-        return f.read()
+async def read_file(file_path: str) -> str:
+    async with aiofiles.open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+        return await f.read()
 
 
-def write_file(file_path: str, content: str) -> None:
-    with open(file_path, "w", encoding="utf-8") as f:
-        f.write(content)
+async def write_file(file_path: str, content: str) -> None:
+    async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
+        await f.write(content)

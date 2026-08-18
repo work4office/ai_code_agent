@@ -1,4 +1,5 @@
 import os
+import asyncio
 import time
 from typing import cast
 
@@ -55,37 +56,40 @@ def retrieve_node(state: AgentState) -> AgentState:
     return {**state, "retrieved_context": context["retrieved_documents"]}
 
 
-def analyze_node(state: AgentState) -> AgentState:
+async def analyze_node(state: AgentState) -> AgentState:
     start_time = time.perf_counter()
     prompt = ANALYSIS_PROMPT.format(
         user_request=state["user_request"], retrieved_context=state["retrieved_context"]
     )
 
-    response = llm.invoke(prompt)
+    response = await llm.ainvoke(prompt)
     end_time = time.perf_counter()
     print("analyze_node: ", end_time - start_time)
     return {**state, "analysis": response.content}  # type: ignore
 
 
-def plan_node(state: AgentState) -> AgentState:
+async def plan_node(state: AgentState) -> AgentState:
     start_time = time.perf_counter()
     prompt = PLAN_PROMPT.format(analysis=state["analysis"])
 
     response = cast(
         ImplementationPlan,
-        llm.with_structured_output(ImplementationPlan).invoke(prompt),
+        await llm.with_structured_output(ImplementationPlan).ainvoke(prompt),
     )
     end_time = time.perf_counter()
     print("plan_node: ", end_time - start_time)
     return {**state, "implementation_plan": response}
 
 
-def generate_changes_node(state: AgentState) -> AgentState:
+async def generate_changes_node(state: AgentState) -> AgentState:
     start_time = time.perf_counter()
     generated_changes: dict[str, GeneratedChanges] = {}
 
     implementation_plan = state["implementation_plan"]
-    print("implementation_plan.file_changes length: ", len(implementation_plan.file_changes))
+    print(
+        "implementation_plan.file_changes length: ",
+        len(implementation_plan.file_changes),
+    )
     counter = 0
     for file_change in implementation_plan.file_changes:
 
@@ -110,7 +114,7 @@ def generate_changes_node(state: AgentState) -> AgentState:
 
         response = cast(
             FileModification,
-            llm.with_structured_output(FileModification).invoke(prompt),
+            await llm.with_structured_output(FileModification).ainvoke(prompt),
         )
 
         generated_changes[resolved_file_path] = GeneratedChanges(
@@ -119,7 +123,7 @@ def generate_changes_node(state: AgentState) -> AgentState:
             summary=response.summary,
         )
         counter += 1
-        print("generated_changes count: ",counter)
+        print("generated_changes count: ", counter)
     end_time = time.perf_counter()
     print("generate_changes_node: ", end_time - start_time)
     return {**state, "generated_changes": generated_changes, "retry_count": 1}
@@ -132,7 +136,7 @@ def generate_diff_node(state: AgentState) -> AgentState:
     for file_path, change in state["generated_changes"].items():
 
         if change.action == "modify":
-            original_content = read_file(file_path)
+            original_content = asyncio.run(read_file(file_path))
         else:
             original_content = ""
 
@@ -148,7 +152,7 @@ def generate_diff_node(state: AgentState) -> AgentState:
     return {**state, "generated_diffs": generated_diffs}
 
 
-def review_node(state: AgentState) -> AgentState:
+async def review_node(state: AgentState) -> AgentState:
     start_time = time.perf_counter()
     combined_diff = "\n\n".join(state["generated_diffs"].values())
 
@@ -159,7 +163,7 @@ def review_node(state: AgentState) -> AgentState:
         generated_diffs=combined_diff,
     )
     try:
-        response = llm.with_structured_output(ReviewResult).invoke(prompt)
+        response = await llm.with_structured_output(ReviewResult).ainvoke(prompt)
         review_result = coerce_review_result(response)
     except Exception as exc:
         review_result = ReviewResult(
@@ -172,7 +176,7 @@ def review_node(state: AgentState) -> AgentState:
     return {**state, "review_result": review_result}
 
 
-def improve_node(state: AgentState) -> AgentState:
+async def improve_node(state: AgentState) -> AgentState:
     start_time = time.perf_counter()
     generated_changes: dict[str, GeneratedChanges] = {}
 
@@ -187,7 +191,7 @@ def improve_node(state: AgentState) -> AgentState:
         )
         response = cast(
             FileModification,
-            llm.with_structured_output(FileModification).invoke(prompt),
+            await llm.with_structured_output(FileModification).ainvoke(prompt),
         )
         generated_changes[file_path] = GeneratedChanges(
             action=change.action,
@@ -229,10 +233,10 @@ def apply_changes_node(state: AgentState) -> AgentState:
         if os.path.exists(file_path):
             backup_path = file_path + ".agent.backup"
 
-            original = read_file(file_path)
-            write_file(backup_path, original)
+            original = asyncio.run(read_file(file_path))
+            asyncio.run(write_file(backup_path, original))
 
-        write_file(file_path, change.updated_content)
+        asyncio.run(write_file(file_path, change.updated_content))
 
         applied_files.append(file_path)
     end_time = time.perf_counter()
