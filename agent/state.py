@@ -18,7 +18,6 @@ class AgentState(TypedDict):
     implementation_plan: ImplementationPlan
 
     generated_changes: dict[str, GeneratedChanges]
-    generated_diffs: dict[str, str]
 
     review_result: ReviewResult
     approved: bool

@@ -27,10 +27,12 @@ class ReviewIssue(BaseModel):
         "high",
         "critical",
     ] = "medium"
+    recommended_fix: str
 
 
 class ReviewResult(BaseModel):
     review_score: float = Field(default=0)
+    passed: bool = Field(default=False)
     summary: str = Field(default="")
     issues: list[ReviewIssue] = Field(default_factory=list)
 

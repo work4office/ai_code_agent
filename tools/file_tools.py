@@ -67,6 +67,7 @@ async def create_backup(file_path: str, directory_path: str) -> None:
         )
 
         backup_path = os.path.join(
+            directory_path,
             ".agent_backups",
             relative_path + ".agent.backup",
         )

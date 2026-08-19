@@ -5,10 +5,8 @@ import streamlit as st
 from models.llm import get_embedding, get_goggle_embedding
 
 
-def get_vectorstore(collection_name: str = "codebase"):
-    embeddings = get_embedding()
-
-    directory_path = st.session_state.directory_path
+def get_vectorstore(directory_path: str, collection_name: str = "codebase"):
+    embeddings = get_goggle_embedding()
 
     project_id = hashlib.md5(directory_path.encode()).hexdigest()
 

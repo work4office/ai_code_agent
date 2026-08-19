@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import time
@@ -16,6 +17,7 @@ from tools.utils import (
     generate_diff,
     coerce_generated_change,
     generate_review_context,
+    get_generated_diffs,
 )
 from tools.file_tools import create_backup, scan_directory, read_file, write_file
 from tools.code_indexer import index_codebase
@@ -31,7 +33,7 @@ from agent.prompts import (
     IMPROVE_PROMPT,
 )
 
-llm = get_llm()
+llm = get_goggle_llm()
 
 
 def scan_node(state: AgentState) -> AgentState:
@@ -44,7 +46,9 @@ def scan_node(state: AgentState) -> AgentState:
 
 async def index_node(state: AgentState) -> AgentState:
     start_time = time.perf_counter()
-    await index_codebase(state["project_files"])
+    await index_codebase(
+        file_paths=state["project_files"], directory_path=state["directory_path"]
+    )
     end_time = time.perf_counter()
     print("index_node: ", end_time - start_time)
     return state
@@ -52,7 +56,9 @@ async def index_node(state: AgentState) -> AgentState:
 
 def retrieve_node(state: AgentState) -> AgentState:
     start_time = time.perf_counter()
-    context = retrieve_relevant_code(state["user_request"])
+    context = retrieve_relevant_code(
+        user_request=state["user_request"], directory_path=state["directory_path"]
+    )
     end_time = time.perf_counter()
     print("retrieve_node: ", end_time - start_time)
     return {**state, "retrieved_context": context["retrieved_documents"]}
@@ -88,11 +94,6 @@ async def generate_changes_node(state: AgentState) -> AgentState:
     generated_changes: dict[str, GeneratedChanges] = {}
 
     implementation_plan = state["implementation_plan"]
-    print(
-        "implementation_plan.file_changes length: ",
-        len(implementation_plan.file_changes),
-    )
-    counter = 0
     for file_change in implementation_plan.file_changes:
 
         resolved_file_path = resolve_agent_file_path(
@@ -124,40 +125,15 @@ async def generate_changes_node(state: AgentState) -> AgentState:
             updated_content=response.updated_content,
             summary=response.summary,
         )
-        counter += 1
-        print("generated_changes count: ", counter)
     end_time = time.perf_counter()
     print("generate_changes_node: ", end_time - start_time)
     return {**state, "generated_changes": generated_changes, "retry_count": 1}
 
 
-async def generate_diff_node(state: AgentState) -> AgentState:
-    start_time = time.perf_counter()
-    generated_diffs = {}
-
-    for file_path, change in state["generated_changes"].items():
-
-        if change.action == "modify":
-            original_content = await read_file(file_path)
-        else:
-            original_content = ""
-
-        diff = generate_diff(
-            file_path=file_path,
-            old_content=original_content,
-            new_content=change.updated_content,
-        )
-        if diff:
-            generated_diffs[file_path] = diff
-    end_time = time.perf_counter()
-    print("generate_diff_node: ", end_time - start_time)
-    return {**state, "generated_diffs": generated_diffs}
-
-
 async def review_node(state: AgentState) -> AgentState:
     start_time = time.perf_counter()
 
-    review_context = generate_review_context(state["generated_changes"])
+    review_context = await generate_review_context(state["generated_changes"])
 
     prompt = REVIEW_PROMPT.format(
         user_request=state["user_request"],
@@ -171,10 +147,12 @@ async def review_node(state: AgentState) -> AgentState:
         review_result = ReviewResult(
             review_score=0,
             summary="The review could not be completed with valid structured output.",
+            passed=False,
             issues=[
                 ReviewIssue(
                     file_path=None,
                     issue=f"Malformed review output: {exc}",
+                    recommended_fix="",
                 )
             ],
         )
@@ -228,10 +206,11 @@ async def improve_node(state: AgentState) -> AgentState:
 
 def human_approval_node(state: AgentState):
     start_time = time.perf_counter()
+    diffs = asyncio.run(get_generated_diffs(state["generated_changes"]))
     payload = {
         "file_changes": state["implementation_plan"].file_changes,
         "implementation_plan": state["implementation_plan"],
-        "diffs": state["generated_diffs"],
+        "diffs": diffs,
         "review": state["review_result"],
     }
 

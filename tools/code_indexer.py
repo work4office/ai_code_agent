@@ -3,8 +3,8 @@ from vectorstore.chroma_store import get_vectorstore
 from tools.file_tools import read_file
 
 
-async def index_codebase(file_paths: list[str]) -> str:
-    vectorstore = get_vectorstore()
+async def index_codebase(file_paths: list[str], directory_path: str) -> str:
+    vectorstore = get_vectorstore(directory_path)
 
     documents = []
 

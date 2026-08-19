@@ -1,8 +1,8 @@
 from vectorstore.chroma_store import get_vectorstore
 
 
-def retrieve_relevant_code(user_request: str, k: int = 8) -> dict:
-    vectorstore = get_vectorstore()
+def retrieve_relevant_code(user_request: str, directory_path: str, k: int = 8) -> dict:
+    vectorstore = get_vectorstore(directory_path)
 
     context_parts = []
 

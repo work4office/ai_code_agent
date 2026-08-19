@@ -15,7 +15,6 @@ from agent.nodes import (
     generate_changes_node,
     review_node,
     improve_node,
-    generate_diff_node,
     apply_changes_node,
     human_approval_node,
 )
@@ -46,7 +45,6 @@ def build_graph():
     graph.add_node("analyze", analyze_node)
     graph.add_node("plan", plan_node)
     graph.add_node("generate_changes", generate_changes_node)
-    graph.add_node("generate_diff", generate_diff_node)
     graph.add_node("review", review_node)
     graph.add_node("improve", improve_node)
     graph.add_node("human_approval", human_approval_node)
@@ -58,8 +56,7 @@ def build_graph():
     graph.add_edge("retrieve", "analyze")
     graph.add_edge("analyze", "plan")
     graph.add_edge("plan", "generate_changes")
-    graph.add_edge("generate_changes", "generate_diff")
-    graph.add_edge("generate_diff", "review")
+    graph.add_edge("generate_changes", "review")
 
     graph.add_conditional_edges(
         "review",

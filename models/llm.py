@@ -31,7 +31,7 @@ def get_embedding() -> AzureOpenAIEmbeddings:
 
 def get_goggle_llm():
     model = ChatGoogleGenerativeAI(
-        model="gemini-3.7-flash", google_api_key=os.environ["GOOGLE_API_KEY"]
+        model="gemini-3.5-flash-lite", google_api_key=os.environ["GOOGLE_API_KEY"]
     )
 
     return model
@@ -39,7 +39,7 @@ def get_goggle_llm():
 
 def get_goggle_embedding():
     embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/text-embedding-004",
+        model="gemini-embedding-2-preview",
         api_key=SecretStr(os.environ["GOOGLE_API_KEY"]),
     )
 

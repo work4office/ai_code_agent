@@ -2,12 +2,17 @@ import difflib
 from typing import Any, LiteralString
 
 from agent.schemas import GeneratedChanges, ReviewResult
+from tools.file_tools import read_file
 
 
-def generate_diff(file_path: str, old_content: str, new_content: str):
-
+async def generate_diff(file_path: str, change: GeneratedChanges):
+    if change.action == "modify":
+        original_content = await read_file(file_path)
+    else:
+        original_content = ""
+    new_content = change.updated_content
     diff = difflib.unified_diff(
-        old_content.splitlines(),
+        original_content.splitlines(),
         new_content.splitlines(),
         fromfile=file_path,
         tofile=f"{file_path}.updated",
@@ -15,6 +20,21 @@ def generate_diff(file_path: str, old_content: str, new_content: str):
     )
 
     return "\n".join(diff)
+
+
+async def get_generated_diffs(generated_changes: dict[str, GeneratedChanges]):
+    generated_diffs: dict[str, dict] = {}
+    for file_path, change in generated_changes.items():
+        if change.action == "modify":
+            original_content = await read_file(file_path)
+        else:
+            original_content = ""
+        new_content = change.updated_content
+        generated_diffs[file_path] = {
+            "original_content": original_content,
+            "new_content": new_content,
+        }
+    return generated_diffs
 
 
 def coerce_review_result(value: Any) -> ReviewResult:
@@ -34,7 +54,7 @@ def coerce_generated_change(value: Any) -> GeneratedChanges:
     return GeneratedChanges.model_validate(value)
 
 
-def generate_review_context(
+async def generate_review_context(
     generated_changes: dict[str, GeneratedChanges],
 ) -> LiteralString:
 
@@ -43,8 +63,7 @@ def generate_review_context(
     for file_path, change in generated_changes.items():
 
         if change.action == "modify":
-
-            diff = generated_changes.get(file_path)
+            diff = await generate_diff(file_path, change)
 
             if diff:
                 review_context_parts.append(f"""

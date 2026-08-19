@@ -142,37 +142,24 @@ REVIEW_PROMPT = """
 
     Review Context:
     {review_context}
-
-    Review the implementation.
     
-    Return file-level issues.
+    Review the implementation. Return file-level issues. Do not merge issues from different files.
+    
+    Return:
 
-    For every issue identify:
+    1. review_score (0-10)
+    2. passed (true/false)
+    3. summary
+    4. issues
 
-    1. File path
-    2. Issue description
-    3. Severity
-    4. Recommended fix
+    For each issue provide:
+    - file_path
+    - issue
+    - severity
+    - recommended_fix
 
-    Do not merge issues from different files.
-
-    Evaluate:
-
-    1. Requirement Satisfaction
-    2. Completeness
-    3. Regression Risk
-    4. Technical Correctness
-    5. Security
-    6. Maintainability
-
-    Scoring:
-
-    Requirement Satisfaction: X/10
-    Completeness: X/10
-    Technical Correctness: X/10
-    Regression Safety: X/10
-    Security: X/10
-    Maintainability: X/10
+    Only include actual problems.
+    Do not create issues for files that have no concerns.
 
     Overall Score Rules:
 
@@ -190,20 +177,6 @@ REVIEW_PROMPT = """
 
     0-2
     Incorrect implementation
-
-    Return:
-
-    Overall Score
-
-    Pass/Fail
-
-    Issues
-
-    Missing Work
-
-    Recommended Fixes
-
-    Summary
     """
 
 IMPROVE_PROMPT = """
